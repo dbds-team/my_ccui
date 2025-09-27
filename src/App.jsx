@@ -25,6 +25,7 @@ import MainContent from './components/MainContent';
 import MobileNav from './components/MobileNav';
 import ToolsSettings from './components/ToolsSettings';
 import QuickSettingsPanel from './components/QuickSettingsPanel';
+import SettingsPage from './components/SettingsPage';
 
 import { useWebSocket } from './utils/websocket';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -54,6 +55,7 @@ function AppContent() {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showToolsSettings, setShowToolsSettings] = useState(false);
   const [showQuickSettings, setShowQuickSettings] = useState(false);
+  const [showMobileSettings, setShowMobileSettings] = useState(false);
   const [autoExpandTools, setAutoExpandTools] = useState(() => {
     const saved = localStorage.getItem('autoExpandTools');
     return saved !== null ? JSON.parse(saved) : false;
@@ -516,7 +518,13 @@ function AppContent() {
               onProjectDelete={handleProjectDelete}
               isLoading={isLoadingProjects}
               onRefresh={handleSidebarRefresh}
-              onShowSettings={() => setShowToolsSettings(true)}
+              onShowSettings={() => {
+                if (isMobile) {
+                  setShowMobileSettings(true);
+                } else {
+                  setShowToolsSettings(true);
+                }
+              }}
               updateAvailable={updateAvailable}
               latestVersion={latestVersion}
               currentVersion={currentVersion}
@@ -561,7 +569,13 @@ function AppContent() {
               onProjectDelete={handleProjectDelete}
               isLoading={isLoadingProjects}
               onRefresh={handleSidebarRefresh}
-              onShowSettings={() => setShowToolsSettings(true)}
+              onShowSettings={() => {
+                if (isMobile) {
+                  setShowMobileSettings(true);
+                } else {
+                  setShowToolsSettings(true);
+                }
+              }}
               updateAvailable={updateAvailable}
               latestVersion={latestVersion}
               currentVersion={currentVersion}
@@ -589,7 +603,13 @@ function AppContent() {
           onSessionInactive={markSessionAsInactive}
           onReplaceTemporarySession={replaceTemporarySession}
           onNavigateToSession={(sessionId) => navigate(`/session/${sessionId}`)}
-          onShowSettings={() => setShowToolsSettings(true)}
+          onShowSettings={() => {
+            if (isMobile) {
+              setShowMobileSettings(true);
+            } else {
+              setShowToolsSettings(true);
+            }
+          }}
           autoExpandTools={autoExpandTools}
           showRawParameters={showRawParameters}
           autoScrollToBottom={autoScrollToBottom}
@@ -638,6 +658,12 @@ function AppContent() {
       <ToolsSettings
         isOpen={showToolsSettings}
         onClose={() => setShowToolsSettings(false)}
+      />
+
+      {/* Mobile Settings Page */}
+      <SettingsPage
+        isOpen={showMobileSettings}
+        onClose={() => setShowMobileSettings(false)}
       />
 
       {/* Version Upgrade Modal */}

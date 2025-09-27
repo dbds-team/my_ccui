@@ -1,21 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Settings, Eye, EyeOff } from 'lucide-react';
+import ServerConfig from './ServerConfig';
+import { credentialsStorage } from '../utils/credentials';
+import PlatformUtils from '../utils/platform';
 
 const LoginForm = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberPassword, setRememberPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [currentServer, setCurrentServer] = useState('');
   
   const { login } = useAuth();
+
+  // 加载保存的凭据和服务器配置
+  useEffect(() => {
+    loadSavedData();
+  }, []);
+
+  const loadSavedData = async () => {
+    try {
+      // 加载保存的凭据
+      const savedCredentials = await credentialsStorage.getSavedCredentials();
+      if (savedCredentials) {
+        setUsername(savedCredentials.username);
+        setPassword(savedCredentials.password);
+        setRememberPassword(true);
+      }
+
+      // 加载服务器配置
+      const serverConfig = await credentialsStorage.getServerConfig();
+      if (serverConfig) {
+        setCurrentServer(serverConfig);
+      } else {
+        setCurrentServer('默认服务器');
+      }
+    } catch (error) {
+      console.error('Failed to load saved data:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
     if (!username || !password) {
-      setError('Please enter both username and password');
+      setError('请输入用户名和密码');
       return;
     }
     
@@ -23,11 +57,21 @@ const LoginForm = () => {
     
     const result = await login(username, password);
     
-    if (!result.success) {
+    if (result.success) {
+      // 保存凭据（如果用户选择记住密码）
+      await credentialsStorage.saveCredentials(username, password, rememberPassword);
+    } else {
       setError(result.error);
     }
     
     setIsLoading(false);
+  };
+
+  const handleServerConfigSave = async (serverUrl) => {
+    await credentialsStorage.saveServerConfig(serverUrl);
+    setCurrentServer(serverUrl);
+    // 这里可以添加重新初始化API配置的逻辑
+    window.location.reload(); // 简单的解决方案：重新加载页面
   };
 
   return (
@@ -49,9 +93,29 @@ const LoginForm = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 服务器配置显示 */}
+            <div className="bg-muted/50 rounded-md p-3 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-muted-foreground">
+                    服务器: {currentServer}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowServerConfig(true)}
+                  className="p-1 hover:bg-muted rounded transition-colors"
+                  disabled={isLoading}
+                >
+                  <Settings className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            </div>
+
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-foreground mb-1">
-                Username
+                用户名
               </label>
               <input
                 type="text"
@@ -59,26 +123,53 @@ const LoginForm = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your username"
+                placeholder="请输入用户名"
                 required
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-                Password
+                密码
               </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="请输入密码"
+                  required
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* 记住密码选项 */}
+            <div className="flex items-center space-x-2">
               <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your password"
-                required
+                type="checkbox"
+                id="remember"
+                checked={rememberPassword}
+                onChange={(e) => setRememberPassword(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500 focus:ring-2"
                 disabled={isLoading}
               />
+              <label htmlFor="remember" className="text-sm text-foreground cursor-pointer">
+                记住密码
+              </label>
             </div>
 
             {error && (
@@ -92,17 +183,29 @@ const LoginForm = () => {
               disabled={isLoading}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? '登录中...' : '登录'}
             </button>
           </form>
 
           <div className="text-center">
             <p className="text-sm text-muted-foreground">
-              Enter your credentials to access Claude Code UI
+              输入您的凭据以访问 Claude Code UI
             </p>
+            {PlatformUtils.isNative() && (
+              <p className="text-xs text-muted-foreground mt-1">
+                移动端版本 - 支持触摸操作
+              </p>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* 服务器配置弹窗 */}
+      <ServerConfig
+        isOpen={showServerConfig}
+        onClose={() => setShowServerConfig(false)}
+        onSave={handleServerConfigSave}
+      />
     </div>
   );
 };
