@@ -110,12 +110,30 @@ export class PlatformUtils {
 
   static addNetworkListener(callback) {
     if (!this.isNative()) {
-      window.addEventListener('online', () => callback({ connected: true }));
-      window.addEventListener('offline', () => callback({ connected: false }));
-      return;
+      const onlineHandler = () => callback({ connected: true, connectionType: 'unknown' });
+      const offlineHandler = () => callback({ connected: false, connectionType: 'none' });
+      
+      window.addEventListener('online', onlineHandler);
+      window.addEventListener('offline', offlineHandler);
+      
+      // 返回清理函数
+      return () => {
+        window.removeEventListener('online', onlineHandler);
+        window.removeEventListener('offline', offlineHandler);
+      };
     }
 
-    Network.addListener('networkStatusChange', callback);
+    try {
+      const listener = Network.addListener('networkStatusChange', callback);
+      return () => {
+        if (listener && listener.remove) {
+          listener.remove();
+        }
+      };
+    } catch (error) {
+      console.error('Failed to add network listener:', error);
+      return () => {}; // 返回空的清理函数
+    }
   }
 
   // Preferences wrapper for consistent storage across platforms

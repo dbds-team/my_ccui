@@ -33,42 +33,40 @@ const SettingsPage = ({ isOpen, onClose }) => {
   const [showCredentials, setShowCredentials] = useState(false);
 
   useEffect(() => {
+    let networkCleanup = () => {};
+    
     if (isOpen) {
       loadSettings();
-      checkNetworkStatus();
+      
+      // 设置网络监听器
+      checkNetworkStatus().then((cleanup) => {
+        networkCleanup = cleanup || (() => {});
+      });
     }
+
+    return () => {
+      networkCleanup(); // 清理网络监听器
+    };
   }, [isOpen]);
 
   const checkNetworkStatus = async () => {
     try {
-      if (PlatformUtils.isNative()) {
-        const status = await PlatformUtils.getNetworkStatus();
-        setNetworkStatus(status);
-        
-        // 监听网络状态变化
-        PlatformUtils.addNetworkListener((status) => {
-          setNetworkStatus(status);
-        });
-      } else {
-        // Web环境网络检测
-        setNetworkStatus({
-          connected: navigator.onLine,
-          connectionType: 'unknown'
-        });
-        
-        const handleOnline = () => setNetworkStatus({ connected: true, connectionType: 'unknown' });
-        const handleOffline = () => setNetworkStatus({ connected: false, connectionType: 'none' });
-        
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        
-        return () => {
-          window.removeEventListener('online', handleOnline);
-          window.removeEventListener('offline', handleOffline);
-        };
-      }
+      // 获取初始网络状态
+      const status = await PlatformUtils.getNetworkStatus();
+      setNetworkStatus(status);
+      
+      // 监听网络状态变化，返回清理函数
+      const cleanup = PlatformUtils.addNetworkListener((newStatus) => {
+        console.log('Settings - Network status changed:', newStatus);
+        setNetworkStatus(newStatus);
+      });
+      
+      return cleanup;
     } catch (error) {
       console.error('Failed to check network status:', error);
+      // 设置默认状态
+      setNetworkStatus({ connected: true, connectionType: 'unknown' });
+      return () => {}; // 返回空的清理函数
     }
   };
 
