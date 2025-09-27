@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Wifi, WifiOff, Settings, Check, X } from 'lucide-react';
+import { Server, Wifi, WifiOff, Settings, Check, X, AlertCircle } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
 import PlatformUtils from '../utils/platform';
 
@@ -8,6 +8,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('idle'); // idle, connecting, success, error
   const [errorMessage, setErrorMessage] = useState('');
+  const [networkStatus, setNetworkStatus] = useState({ connected: true, connectionType: 'unknown' });
   
   // 预设服务器列表
   const presetServers = [
@@ -17,8 +18,41 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
   ];
 
   useEffect(() => {
-    loadSavedConfig();
-  }, []);
+    if (isOpen) {
+      loadSavedConfig();
+      checkNetworkStatus();
+    }
+  }, [isOpen]);
+
+  const checkNetworkStatus = async () => {
+    try {
+      if (PlatformUtils.isNative()) {
+        const status = await PlatformUtils.getNetworkStatus();
+        setNetworkStatus(status);
+        
+        // 监听网络状态变化
+        PlatformUtils.addNetworkListener((status) => {
+          setNetworkStatus(status);
+        });
+      } else {
+        // Web环境网络检测
+        setNetworkStatus({
+          connected: navigator.onLine,
+          connectionType: 'unknown'
+        });
+        
+        window.addEventListener('online', () => {
+          setNetworkStatus({ connected: true, connectionType: 'unknown' });
+        });
+        
+        window.addEventListener('offline', () => {
+          setNetworkStatus({ connected: false, connectionType: 'none' });
+        });
+      }
+    } catch (error) {
+      console.error('Failed to check network status:', error);
+    }
+  };
 
   const loadSavedConfig = async () => {
     try {
@@ -56,6 +90,11 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
       setConnectionStatus('connecting');
       setErrorMessage('');
 
+      // 检查网络连接
+      if (!networkStatus.connected) {
+        throw new Error('网络连接不可用，请检查网络设置');
+      }
+
       // 规范化URL
       const normalizedUrl = url.replace(/\/$/, '');
       
@@ -77,7 +116,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
         setConnectionStatus('success');
         return true;
       } else {
-        throw new Error(`服务器响应错误: ${response.status}`);
+        throw new Error(`服务器响应错误: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Connection test failed:', error);
@@ -85,7 +124,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
       
       if (error.name === 'AbortError') {
         setErrorMessage('连接超时，请检查服务器地址和网络连接');
-      } else if (error.message.includes('Failed to fetch')) {
+      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
         setErrorMessage('无法连接到服务器，请检查地址是否正确');
       } else {
         setErrorMessage(error.message || '连接测试失败');
@@ -99,6 +138,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
   const handleSave = async () => {
     if (!serverUrl.trim()) {
       setErrorMessage('请输入服务器地址');
+      setConnectionStatus('error');
       return;
     }
 
@@ -117,32 +157,68 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
 
   const handlePresetSelect = async (url) => {
     setServerUrl(url);
+    setConnectionStatus('idle');
+    setErrorMessage('');
+    // 自动测试预设服务器连接
     await testConnection(url);
+  };
+
+  const handleInputChange = (e) => {
+    setServerUrl(e.target.value);
+    setConnectionStatus('idle');
+    setErrorMessage('');
   };
 
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connecting':
-        return <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />;
+        return <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />;
       case 'success':
-        return <Check className="w-5 h-5 text-green-500" />;
+        return <Check className="w-4 h-4 text-green-500" />;
       case 'error':
-        return <X className="w-5 h-5 text-red-500" />;
+        return <X className="w-4 h-4 text-red-500" />;
       default:
-        return <Wifi className="w-5 h-5 text-gray-400" />;
+        return <Wifi className="w-4 h-4 text-gray-400" />;
     }
   };
 
-  const getStatusColor = () => {
+  const getInputBorderClass = () => {
     switch (connectionStatus) {
       case 'connecting':
-        return 'border-blue-500';
+        return 'border-blue-500 ring-2 ring-blue-500/20';
       case 'success':
-        return 'border-green-500';
+        return 'border-green-500 ring-2 ring-green-500/20';
       case 'error':
-        return 'border-red-500';
+        return 'border-red-500 ring-2 ring-red-500/20';
       default:
-        return 'border-border';
+        return 'border-border focus:border-primary focus:ring-2 focus:ring-primary/20';
+    }
+  };
+
+  const getNetworkIcon = () => {
+    if (!networkStatus.connected) {
+      return <WifiOff className="w-4 h-4 text-red-500" />;
+    }
+    return <Wifi className="w-4 h-4 text-green-500" />;
+  };
+
+  const getNetworkStatusText = () => {
+    if (!networkStatus.connected) {
+      return '网络断开';
+    }
+    
+    const type = networkStatus.connectionType || 'unknown';
+    switch (type) {
+      case 'wifi':
+        return 'WiFi连接';
+      case 'cellular':
+        return '移动网络';
+      case 'ethernet':
+        return '以太网';
+      case 'none':
+        return '无网络';
+      default:
+        return '网络已连接';
     }
   };
 
@@ -150,7 +226,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg border border-border w-full max-w-md max-h-[90vh] overflow-hidden">
+      <div className="bg-card rounded-lg border border-border w-full max-w-md max-h-[90vh] overflow-hidden shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center space-x-2">
@@ -166,19 +242,37 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
         </div>
 
         <div className="p-4 space-y-4 max-h-[calc(90vh-8rem)] overflow-y-auto">
+          {/* 网络状态显示 */}
+          <div className="bg-muted/50 rounded-md p-3">
+            <div className="flex items-center space-x-2">
+              {getNetworkIcon()}
+              <span className="text-sm font-medium text-foreground">
+                {getNetworkStatusText()}
+              </span>
+              {!networkStatus.connected && (
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              )}
+            </div>
+            {!networkStatus.connected && (
+              <p className="text-xs text-red-600 mt-1">
+                请检查网络连接后重试
+              </p>
+            )}
+          </div>
+
           {/* 自定义服务器输入 */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               服务器地址
             </label>
-            <div className={`relative border ${getStatusColor()} rounded-md`}>
+            <div className="relative">
               <input
                 type="url"
                 value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 pr-12"
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 bg-background text-foreground rounded-md transition-all duration-200 pr-10 ${getInputBorderClass()}`}
                 placeholder="http://127.0.0.1:63008"
-                disabled={isConnecting}
+                disabled={isConnecting || !networkStatus.connected}
               />
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 {getStatusIcon()}
@@ -186,11 +280,17 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
             </div>
             
             {connectionStatus === 'success' && (
-              <p className="text-sm text-green-600 mt-1">✓ 连接成功</p>
+              <p className="text-sm text-green-600 mt-1 flex items-center">
+                <Check className="w-3 h-3 mr-1" />
+                连接成功
+              </p>
             )}
             
             {errorMessage && (
-              <p className="text-sm text-red-600 mt-1">{errorMessage}</p>
+              <p className="text-sm text-red-600 mt-1 flex items-start">
+                <AlertCircle className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                {errorMessage}
+              </p>
             )}
           </div>
 
@@ -204,12 +304,12 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
                 <button
                   key={index}
                   onClick={() => handlePresetSelect(server.url)}
-                  disabled={isConnecting}
+                  disabled={isConnecting || !networkStatus.connected}
                   className={`w-full text-left p-3 rounded-md border transition-colors ${
                     serverUrl === server.url
                       ? 'bg-primary/10 border-primary text-primary'
                       : 'bg-muted border-border hover:bg-muted/80'
-                  } disabled:opacity-50`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className="font-medium text-sm">{server.name}</div>
                   <div className="text-xs text-muted-foreground">{server.url}</div>
@@ -241,7 +341,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
           </button>
           <button
             onClick={handleSave}
-            disabled={isConnecting || !serverUrl.trim()}
+            disabled={isConnecting || !serverUrl.trim() || !networkStatus.connected}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isConnecting ? '连接中...' : '保存'}

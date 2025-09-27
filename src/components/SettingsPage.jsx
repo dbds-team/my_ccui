@@ -9,6 +9,7 @@ import {
   LogOut, 
   Smartphone,
   Wifi,
+  WifiOff,
   User,
   Save,
   RotateCcw
@@ -22,6 +23,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('server');
   const [showServerConfig, setShowServerConfig] = useState(false);
+  const [networkStatus, setNetworkStatus] = useState({ connected: true, connectionType: 'unknown' });
   const [settings, setSettings] = useState({
     serverUrl: '',
     rememberPassword: false,
@@ -33,8 +35,42 @@ const SettingsPage = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       loadSettings();
+      checkNetworkStatus();
     }
   }, [isOpen]);
+
+  const checkNetworkStatus = async () => {
+    try {
+      if (PlatformUtils.isNative()) {
+        const status = await PlatformUtils.getNetworkStatus();
+        setNetworkStatus(status);
+        
+        // 监听网络状态变化
+        PlatformUtils.addNetworkListener((status) => {
+          setNetworkStatus(status);
+        });
+      } else {
+        // Web环境网络检测
+        setNetworkStatus({
+          connected: navigator.onLine,
+          connectionType: 'unknown'
+        });
+        
+        const handleOnline = () => setNetworkStatus({ connected: true, connectionType: 'unknown' });
+        const handleOffline = () => setNetworkStatus({ connected: false, connectionType: 'none' });
+        
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }
+    } catch (error) {
+      console.error('Failed to check network status:', error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -147,18 +183,49 @@ const SettingsPage = ({ isOpen, onClose }) => {
                   <h3 className="text-lg font-medium text-foreground mb-4">服务器配置</h3>
                   
                   <div className="space-y-4">
+                    {/* 网络状态显示 */}
+                    <div className="bg-muted/50 rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-foreground">
+                          网络状态
+                        </label>
+                        <div className="flex items-center space-x-1">
+                          {networkStatus.connected ? (
+                            <>
+                              <Wifi className="w-3 h-3 text-green-500" />
+                              <span className="text-xs text-green-600">
+                                {networkStatus.connectionType === 'wifi' ? 'WiFi' : 
+                                 networkStatus.connectionType === 'cellular' ? '移动网络' : '已连接'}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <WifiOff className="w-3 h-3 text-red-500" />
+                              <span className="text-xs text-red-600">断开连接</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="bg-muted/50 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <label className="text-sm font-medium text-foreground">
                           当前服务器
                         </label>
                         <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-xs text-muted-foreground">已连接</span>
+                          <div className={`w-2 h-2 rounded-full ${
+                            networkStatus.connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                          }`}></div>
+                          <span className={`text-xs ${
+                            networkStatus.connected ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {networkStatus.connected ? '已连接' : '连接失败'}
+                          </span>
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
-                        {settings.serverUrl}
+                        {settings.serverUrl || '默认服务器'}
                       </p>
                       <button
                         onClick={() => setShowServerConfig(true)}

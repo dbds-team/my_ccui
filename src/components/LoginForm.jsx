@@ -97,16 +97,24 @@ const LoginForm = () => {
             <div className="bg-muted/50 rounded-md p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-muted-foreground">
-                    服务器: {currentServer}
-                  </span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-foreground">
+                      {currentServer === '默认服务器' ? '使用默认服务器' : '自定义服务器'}
+                    </span>
+                    {currentServer !== '默认服务器' && (
+                      <div className="text-xs text-muted-foreground truncate" title={currentServer}>
+                        {currentServer}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowServerConfig(true)}
-                  className="p-1 hover:bg-muted rounded transition-colors"
+                  className="p-1.5 hover:bg-muted rounded-md transition-colors flex-shrink-0"
                   disabled={isLoading}
+                  title="配置服务器"
                 >
                   <Settings className="w-4 h-4 text-muted-foreground hover:text-foreground" />
                 </button>
