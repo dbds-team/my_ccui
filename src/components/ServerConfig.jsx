@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Server, Wifi, WifiOff, Settings, Check, X, AlertCircle, ChevronLeft } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
 import PlatformUtils from '../utils/platform';
+import { api } from '../utils/api';
 
 const ServerConfig = ({ isOpen, onClose, onSave }) => {
   const [serverUrl, setServerUrl] = useState('');
@@ -117,36 +118,38 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
       // 规范化URL
       const normalizedUrl = url.replace(/\/$/, '');
       
-      // 测试连接
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-
-      const response = await fetch(`${normalizedUrl}/api/auth/status`, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
+      // 使用新的测试连接API
+      const result = await api.testConnection(normalizedUrl);
+      
+      if (result.success) {
         setConnectionStatus('success');
         return true;
       } else {
-        throw new Error(`服务器响应错误: ${response.status} ${response.statusText}`);
+        throw new Error(result.error || `服务器响应错误: ${result.status || 'Unknown'}`);
       }
     } catch (error) {
       console.error('Connection test failed:', error);
       setConnectionStatus('error');
       
-      if (error.name === 'AbortError') {
-        setErrorMessage('连接超时，请检查服务器地址和网络连接');
-      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        setErrorMessage('无法连接到服务器，请检查地址是否正确');
+      // 针对移动端的错误处理
+      if (PlatformUtils.isNative()) {
+        if (error.message.includes('ERR_CLEARTEXT_NOT_PERMITTED')) {
+          setErrorMessage('Android不允许HTTP连接，请使用HTTPS或联系管理员');
+        } else if (error.message.includes('ERR_CONNECTION_REFUSED')) {
+          setErrorMessage('连接被拒绝，请检查服务器地址和端口');
+        } else if (error.message.includes('timeout')) {
+          setErrorMessage('连接超时，请检查网络连接');
+        } else {
+          setErrorMessage(`移动端连接失败: ${error.message || '未知错误'}`);
+        }
       } else {
-        setErrorMessage(error.message || '连接测试失败');
+        if (error.name === 'AbortError') {
+          setErrorMessage('连接超时，请检查服务器地址和网络连接');
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          setErrorMessage('无法连接到服务器，请检查地址是否正确');
+        } else {
+          setErrorMessage(error.message || '连接测试失败');
+        }
       }
       return false;
     } finally {
@@ -273,7 +276,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
           <div className="p-4 space-y-6">
             {/* 网络状态显示 */}
             <div className="bg-muted/50 rounded-lg p-4">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 mb-3">
                 {getNetworkIcon()}
                 <div>
                   <div className="text-sm font-medium text-foreground">
@@ -289,6 +292,18 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
                   <AlertCircle className="w-5 h-5 text-red-500 ml-auto" />
                 )}
               </div>
+              
+              {/* 移动端特殊说明 */}
+              {PlatformUtils.isNative() && (
+                <div className="text-xs text-muted-foreground border-t border-border pt-3">
+                  <div className="font-medium mb-1">移动端连接提示：</div>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li>如连接失败，请确认服务器支持HTTP连接</li>
+                    <li>检查WiFi/数据网络是否正常</li>
+                    <li>服务器地址格式：http://IP:端口</li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* 自定义服务器输入 */}

@@ -3,7 +3,12 @@
   "appName": "Claude Code UI",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "http",
+    "allowNavigation": [
+      "http://117.72.113.106:*",
+      "http://localhost:*",
+      "http://10.0.2.2:*"
+    ]
   },
   "plugins": {
     "SplashScreen": {

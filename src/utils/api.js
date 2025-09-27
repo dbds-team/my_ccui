@@ -1,5 +1,6 @@
 import { credentialsStorage } from './credentials';
 import PlatformUtils from './platform';
+import { CapacitorHttp } from '@capacitor/core';
 
 // Get the API base URL
 const getApiBaseUrl = async () => {
@@ -47,6 +48,42 @@ const getApiBaseUrlSync = () => {
   return `${window.location.protocol}//${window.location.hostname}:63008`;
 };
 
+// 创建支持Capacitor的HTTP请求函数
+const httpRequest = async (url, options = {}) => {
+  if (PlatformUtils.isNative()) {
+    // 在移动端使用Capacitor HTTP
+    try {
+      const response = await CapacitorHttp.request({
+        url,
+        method: options.method || 'GET',
+        headers: options.headers || {},
+        data: options.body,
+        ...options
+      });
+      
+      // 构造类似fetch的响应对象
+      return {
+        ok: response.status >= 200 && response.status < 300,
+        status: response.status,
+        statusText: response.statusText || '',
+        headers: new Map(Object.entries(response.headers || {})),
+        async json() { 
+          return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        },
+        async text() { 
+          return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        }
+      };
+    } catch (error) {
+      console.error('Capacitor HTTP request failed:', error);
+      throw error;
+    }
+  } else {
+    // 在Web端使用标准fetch
+    return fetch(url, options);
+  }
+};
+
 // Utility function for authenticated API calls
 export const authenticatedFetch = async (url, options = {}) => {
   const token = localStorage.getItem('auth-token');
@@ -63,7 +100,7 @@ export const authenticatedFetch = async (url, options = {}) => {
   const baseUrl = await getApiBaseUrl();
   const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : url;
   
-  return fetch(fullUrl, {
+  return httpRequest(fullUrl, {
     ...options,
     headers: {
       ...defaultHeaders,
@@ -103,11 +140,11 @@ export const api = {
   auth: {
     status: async () => {
       const baseUrl = await getApiBaseUrl();
-      return fetch(`${baseUrl}/api/auth/status`);
+      return httpRequest(`${baseUrl}/api/auth/status`);
     },
     login: async (username, password) => {
       const baseUrl = await getApiBaseUrl();
-      return fetch(`${baseUrl}/api/auth/login`, {
+      return httpRequest(`${baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -115,7 +152,7 @@ export const api = {
     },
     register: async (username, password) => {
       const baseUrl = await getApiBaseUrl();
-      return fetch(`${baseUrl}/api/auth/register`, {
+      return httpRequest(`${baseUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -169,20 +206,18 @@ export const api = {
   // 新增: 测试服务器连接的方法
   testConnection: async (serverUrl) => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(`${serverUrl}/api/auth/status`, {
+      const response = await httpRequest(`${serverUrl}/api/auth/status`, {
         method: 'GET',
-        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
+        connectTimeout: 10000,
+        readTimeout: 10000,
       });
 
-      clearTimeout(timeoutId);
       return { success: response.ok, status: response.status };
     } catch (error) {
+      console.error('Connection test failed:', error);
       return { success: false, error: error.message };
     }
   },
