@@ -48,21 +48,27 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
       
+    - name: Get version info
+      id: version
+      run: |
+        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "VERSION=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Building version: ${TAG_NAME}"
+        else
+          echo "VERSION=dev" >> $GITHUB_OUTPUT
+          echo "Building development version"
+        fi
+    
     - name: Setup Android signing
       if: startsWith(github.ref, 'refs/tags/')
       run: |
         echo "Setting up Android signing for release build..."
-        # Create keystore directory
-        mkdir -p android/app/
-        # Decode base64 keystore and save it
-        echo "${{ secrets.KEY_JKS }}" | base64 -d > android/app/dbds-release-key.jks
+        # Decode base64 keystore and save it to android directory (not app subdirectory)
+        echo "${{ secrets.KEY_JKS }}" | base64 -d > android/dbds-release-key.jks
         # Verify keystore was created
-        ls -la android/app/dbds-release-key.jks
-        
-    - name: Build Android APK (Debug)
-      run: |
-        cd android
-        ./gradlew assembleDebug
+        ls -la android/dbds-release-key.jks
+        echo "Keystore created successfully"
         
     - name: Build Android APK (Release - Signed)
       if: startsWith(github.ref, 'refs/tags/')
@@ -72,8 +78,9 @@ jobs:
         ALIAS: ${{ secrets.ALIAS }}
       run: |
         cd android
+        echo "Building signed release APK..."
         ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=app/dbds-release-key.jks \
+          -Pandroid.injected.signing.store.file=../dbds-release-key.jks \
           -Pandroid.injected.signing.store.password="${ANDROID_STORE_PASSWORD}" \
           -Pandroid.injected.signing.key.alias="${ALIAS}" \
           -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}"
@@ -86,36 +93,56 @@ jobs:
         ALIAS: ${{ secrets.ALIAS }}
       run: |
         cd android
+        echo "Building signed release AAB..."
         ./gradlew bundleRelease \
-          -Pandroid.injected.signing.store.file=app/dbds-release-key.jks \
+          -Pandroid.injected.signing.store.file=../dbds-release-key.jks \
           -Pandroid.injected.signing.store.password="${ANDROID_STORE_PASSWORD}" \
           -Pandroid.injected.signing.key.alias="${ALIAS}" \
           -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}"
+          
+    - name: Rename release files
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        cd android/app/build/outputs
+        # Create releases directory
+        mkdir -p releases
         
-    - name: Upload APK artifact (Debug)
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-apk-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        # Rename APK with project name and version
+        if [ -f "apk/release/app-release.apk" ]; then
+          cp "apk/release/app-release.apk" "releases/claude-code-ui-${{ steps.version.outputs.VERSION }}.apk"
+          echo "Created: claude-code-ui-${{ steps.version.outputs.VERSION }}.apk"
+          ls -la "releases/claude-code-ui-${{ steps.version.outputs.VERSION }}.apk"
+        fi
+        
+        # Rename AAB with project name and version
+        if [ -f "bundle/release/app-release.aab" ]; then
+          cp "bundle/release/app-release.aab" "releases/claude-code-ui-${{ steps.version.outputs.VERSION }}.aab"
+          echo "Created: claude-code-ui-${{ steps.version.outputs.VERSION }}.aab"
+          ls -la "releases/claude-code-ui-${{ steps.version.outputs.VERSION }}.aab"
+        fi
+        
+        # List all files in releases directory
+        echo "Files in releases directory:"
+        ls -la releases/
         
     - name: Upload APK artifact (Release)
       if: startsWith(github.ref, 'refs/tags/')
       uses: actions/upload-artifact@v4
       with:
-        name: android-apk-release
-        path: android/app/build/outputs/apk/release/app-release.apk
+        name: claude-code-ui-apk-${{ steps.version.outputs.VERSION }}
+        path: android/app/build/outputs/releases/claude-code-ui-${{ steps.version.outputs.VERSION }}.apk
         
     - name: Upload AAB artifact (Release)
       if: startsWith(github.ref, 'refs/tags/')
       uses: actions/upload-artifact@v4
       with:
-        name: android-aab-release
-        path: android/app/build/outputs/bundle/release/app-release.aab
+        name: claude-code-ui-aab-${{ steps.version.outputs.VERSION }}
+        path: android/app/build/outputs/releases/claude-code-ui-${{ steps.version.outputs.VERSION }}.aab
         
     - name: Cleanup keystore
       if: always()
       run: |
-        rm -f android/app/dbds-release-key.jks
+        rm -f android/dbds-release-key.jks
 
   # Create release with built apps
   create-release:
@@ -128,22 +155,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Download Android APK (Debug)
-      uses: actions/download-artifact@v4
-      with:
-        name: android-apk-debug
-        path: ./releases/
+    - name: Get version info
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         
     - name: Download Android APK (Release)
       uses: actions/download-artifact@v4
       with:
-        name: android-apk-release
+        name: claude-code-ui-apk-${{ steps.version.outputs.VERSION }}
         path: ./releases/
         
     - name: Download Android AAB (Release)
       uses: actions/download-artifact@v4
       with:
-        name: android-aab-release
+        name: claude-code-ui-aab-${{ steps.version.outputs.VERSION }}
         path: ./releases/
         
     - name: Get tag name
@@ -158,14 +183,11 @@ jobs:
         body: |
           ## 🚀 Claude Code UI Mobile Release ${{ steps.tag.outputs.TAG_NAME }}
           
-          ### 📱 Available Applications
+          ### 📱 Production Ready Applications
           
-          #### 🔥 **Production Ready (Signed)**
-          - **app-release.apk** - Signed release APK for direct installation
-          - **app-release.aab** - Signed AAB bundle for Google Play Store
-          
-          #### 🛠️ **Development Version**
-          - **app-debug.apk** - Debug build for testing and development
+          #### 🔥 **DBDS Certified Release Builds**
+          - **claude-code-ui-${{ steps.tag.outputs.TAG_NAME }}.apk** - Signed production APK for direct installation
+          - **claude-code-ui-${{ steps.tag.outputs.TAG_NAME }}.aab** - Signed AAB bundle for Google Play Store
           
           ### 🚀 New Features
           - ✅ **Professional Code Signing** - DBDS certified release builds
@@ -180,14 +202,14 @@ jobs:
           ### 📋 Installation Instructions
           
           #### 🤖 **Android (Recommended)**
-          1. Download **app-release.apk** (signed version)
+          1. Download **claude-code-ui-${{ steps.tag.outputs.TAG_NAME }}.apk**
           2. Enable "Install from unknown sources" in Android settings
           3. Install the APK file
           4. Launch "Claude Code UI" from your app drawer
           
           #### 📦 **Google Play Store Deployment**
-          1. Use **app-release.aab** for Play Console upload
-          2. AAB format provides optimized delivery
+          1. Use **claude-code-ui-${{ steps.tag.outputs.TAG_NAME }}.aab** for Play Console upload
+          2. AAB format provides optimized delivery and smaller downloads
           
           ### 🔧 Technical Specifications
           - **Framework**: Capacitor 6 + React 18
