@@ -64,11 +64,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       run: |
         echo "Setting up Android signing for release build..."
-        # Decode base64 keystore and save it to android directory (not app subdirectory)
-        echo "${{ secrets.KEY_JKS }}" | base64 -d > android/dbds-release-key.jks
+        # Get absolute path for keystore
+        KEYSTORE_PATH="$(pwd)/dbds-release-key.jks"
+        echo "Keystore will be created at: $KEYSTORE_PATH"
+        
+        # Decode base64 keystore and save it to project root
+        echo "${{ secrets.KEY_JKS }}" | base64 -d > "$KEYSTORE_PATH"
+        
         # Verify keystore was created
-        ls -la android/dbds-release-key.jks
-        echo "Keystore created successfully"
+        ls -la "$KEYSTORE_PATH"
+        echo "Keystore created successfully at: $KEYSTORE_PATH"
+        
+        # Export path for gradle
+        echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> $GITHUB_ENV
         
     - name: Build Android APK (Release - Signed)
       if: startsWith(github.ref, 'refs/tags/')
@@ -79,8 +87,9 @@ jobs:
       run: |
         cd android
         echo "Building signed release APK..."
+        echo "Using keystore at: $KEYSTORE_PATH"
         ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=../dbds-release-key.jks \
+          -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
           -Pandroid.injected.signing.store.password="${ANDROID_STORE_PASSWORD}" \
           -Pandroid.injected.signing.key.alias="${ALIAS}" \
           -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}"
@@ -94,8 +103,9 @@ jobs:
       run: |
         cd android
         echo "Building signed release AAB..."
+        echo "Using keystore at: $KEYSTORE_PATH"
         ./gradlew bundleRelease \
-          -Pandroid.injected.signing.store.file=../dbds-release-key.jks \
+          -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
           -Pandroid.injected.signing.store.password="${ANDROID_STORE_PASSWORD}" \
           -Pandroid.injected.signing.key.alias="${ALIAS}" \
           -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}"
