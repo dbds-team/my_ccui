@@ -1,0 +1,229 @@
+/* Mobile-specific styles for Capacitor app */
+
+/* iOS safe area support */
+.ios-app {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Android status bar handling */
+.android-app {
+  padding-top: 0; /* Status bar handled by Capacitor */
+}
+
+/* Native app specific styles */
+.native-app {
+  /* Disable user selection for better native feel */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Disable text size adjustment */
+  -webkit-text-size-adjust: 100%;
+  
+  /* Disable tap highlight */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly button styles */
+.native-app button,
+.native-app .touch-target {
+  min-height: 44px; /* iOS minimum touch target */
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Improved scrolling for mobile */
+.native-app .scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Pull-to-refresh styles */
+.native-app .pull-to-refresh {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Mobile-optimized input styles */
+.native-app input,
+.native-app textarea {
+  /* Prevent zoom on iOS */
+  font-size: 16px;
+  
+  /* Better touch interaction */
+  touch-action: manipulation;
+}
+
+/* Hide scrollbars in native app */
+.native-app::-webkit-scrollbar {
+  display: none;
+}
+.native-app {
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Full screen handling */
+.native-app.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+}
+
+/* Loading spinner optimization for mobile */
+.native-app .loading-spinner {
+  will-change: transform;
+  transform: translateZ(0); /* Force hardware acceleration */
+}
+
+/* Touch feedback */
+.touch-feedback {
+  transition: background-color 0.1s ease;
+}
+
+.touch-feedback:active {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode optimizations for OLED screens */
+@media (prefers-color-scheme: dark) {
+  .native-app {
+    background-color: #000000; /* True black for OLED */
+  }
+}
+
+/* Landscape mode optimizations */
+@media screen and (orientation: landscape) {
+  .native-app .sidebar {
+    /* Adjust sidebar for landscape */
+    max-width: 300px;
+  }
+}
+
+/* High DPI optimizations */
+@media (-webkit-min-device-pixel-ratio: 2) {
+  .native-app .icon {
+    /* Use higher resolution icons */
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* Accessibility improvements for touch */
+.native-app [role="button"],
+.native-app button {
+  position: relative;
+}
+
+.native-app [role="button"]:focus,
+.native-app button:focus {
+  outline: 2px solid #007AFF; /* iOS blue */
+  outline-offset: 2px;
+}
+
+/* Status bar content adjustment */
+.has-status-bar {
+  padding-top: 20px; /* Standard status bar height */
+}
+
+.has-status-bar.ios-app {
+  padding-top: env(safe-area-inset-top, 20px);
+}
+
+/* Splash screen styles */
+.splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.splash-content {
+  text-align: center;
+  color: white;
+}
+
+.splash-logo {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+}
+
+.splash-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.splash-subtitle {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+/* Network status indicator */
+.network-status {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #ef4444;
+  color: white;
+  text-align: center;
+  padding: 8px;
+  font-size: 14px;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.network-status.show {
+  transform: translateY(0);
+}
+
+.network-status.online {
+  background: #10b981;
+}
+
+/* Haptic feedback classes */
+.haptic-light {
+  transition: transform 0.1s ease;
+}
+
+.haptic-light:active {
+  transform: scale(0.98);
+}
+
+.haptic-medium {
+  transition: transform 0.1s ease;
+}
+
+.haptic-medium:active {
+  transform: scale(0.96);
+}
+
+.haptic-heavy {
+  transition: transform 0.1s ease;
+}
+
+.haptic-heavy:active {
+  transform: scale(0.94);
+}

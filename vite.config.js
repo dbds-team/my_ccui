@@ -19,7 +19,22 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     build: {
-      outDir: 'dist'
+      outDir: 'dist',
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            xterm: ['xterm', 'xterm-addon-fit'],
+            codemirror: ['@uiw/react-codemirror', '@codemirror/lang-javascript', '@codemirror/lang-css', '@codemirror/lang-html', '@codemirror/lang-json', '@codemirror/lang-markdown', '@codemirror/lang-python'],
+            capacitor: ['@capacitor/core', '@capacitor/app', '@capacitor/device', '@capacitor/network', '@capacitor/preferences', '@capacitor/status-bar', '@capacitor/splash-screen', '@capacitor/haptics']
+          }
+        }
+      },
+      target: 'es2015'
+    },
+    optimizeDeps: {
+      include: ['@capacitor/core', '@capacitor/app', '@capacitor/device']
     }
   }
 })

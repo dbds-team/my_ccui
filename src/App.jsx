@@ -32,6 +32,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { api } from './utils/api';
+import MobileApp from './components/MobileApp';
+import './styles/mobile.css';
 
 
 // Main App component with routing
@@ -497,7 +499,8 @@ function AppContent() {
   };
 
   return (
-    <div className="fixed inset-0 flex bg-background">
+    <MobileApp>
+      <div className="fixed inset-0 flex bg-background">
       {/* Fixed Desktop Sidebar */}
       {!isMobile && (
         <div className="w-80 flex-shrink-0 border-r border-border bg-card">
@@ -639,7 +642,8 @@ function AppContent() {
 
       {/* Version Upgrade Modal */}
       <VersionUpgradeModal />
-    </div>
+      </div>
+    </MobileApp>
   );
 }
 

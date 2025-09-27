@@ -1,3 +1,19 @@
+// Get the API base URL
+const getApiBaseUrl = () => {
+  // In production, use the configured API host
+  if (import.meta.env.VITE_API_HOST) {
+    return import.meta.env.VITE_API_HOST;
+  }
+  
+  // In development, use relative URLs or localhost
+  if (import.meta.env.DEV) {
+    return '';  // Use relative URLs for development proxy
+  }
+  
+  // Fallback to current host with default port
+  return `${window.location.protocol}//${window.location.hostname}:63008`;
+};
+
 // Utility function for authenticated API calls
 export const authenticatedFetch = (url, options = {}) => {
   const token = localStorage.getItem('auth-token');
@@ -10,7 +26,10 @@ export const authenticatedFetch = (url, options = {}) => {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
   
-  return fetch(url, {
+  // Construct full URL if needed
+  const fullUrl = url.startsWith('/') ? `${getApiBaseUrl()}${url}` : url;
+  
+  return fetch(fullUrl, {
     ...options,
     headers: {
       ...defaultHeaders,

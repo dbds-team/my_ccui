@@ -8,6 +8,23 @@ import { spawn } from 'child_process';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
+
+// Helper function to spawn Claude CLI with proxy support
+function spawnClaudeWithProxy(args, options = {}) {
+  // Setup environment with proxy if configured
+  const claudeEnv = { ...process.env };
+  if (process.env.CLAUDE_PROXY) {
+    claudeEnv.HTTP_PROXY = process.env.CLAUDE_PROXY;
+    claudeEnv.HTTPS_PROXY = process.env.CLAUDE_PROXY;
+    console.log('🌐 Using proxy for Claude CLI MCP command:', process.env.CLAUDE_PROXY);
+  }
+  
+  return spawn('claude', args, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    ...options,
+    env: claudeEnv
+  });
+}
 const __dirname = dirname(__filename);
 
 // Claude CLI command routes
@@ -21,7 +38,7 @@ router.get('/cli/list', async (req, res) => {
     const { promisify } = await import('util');
     const exec = promisify(spawn);
     
-    const process = spawn('claude', ['mcp', 'list', '-s', 'user'], {
+    const process = spawnClaudeWithProxy(['mcp', 'list', '-s', 'user'], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
     
@@ -93,7 +110,7 @@ router.post('/cli/add', async (req, res) => {
     
     console.log('🔧 Running Claude CLI command:', 'claude', cliArgs.join(' '));
     
-    const process = spawn('claude', cliArgs, {
+    const process = spawnClaudeWithProxy(cliArgs, {
       stdio: ['pipe', 'pipe', 'pipe']
     });
     
@@ -136,7 +153,7 @@ router.delete('/cli/remove/:name', async (req, res) => {
     
     const { spawn } = await import('child_process');
     
-    const process = spawn('claude', ['mcp', 'remove', '-s', 'user', name], {
+    const process = spawnClaudeWithProxy(['mcp', 'remove', '-s', 'user', name], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
     
@@ -179,7 +196,7 @@ router.get('/cli/get/:name', async (req, res) => {
     
     const { spawn } = await import('child_process');
     
-    const process = spawn('claude', ['mcp', 'get', '-s', 'user', name], {
+    const process = spawnClaudeWithProxy(['mcp', 'get', '-s', 'user', name], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
     

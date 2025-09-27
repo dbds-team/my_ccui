@@ -516,11 +516,15 @@ function handleShellConnection(ws) {
         
         try {
           // Build shell command that changes to project directory first, then runs claude
-          let claudeCommand = 'claude';
+          // Setup proxy environment if configured
+          const proxyPrefix = process.env.CLAUDE_PROXY ? 
+            `HTTP_PROXY=${process.env.CLAUDE_PROXY} HTTPS_PROXY=${process.env.CLAUDE_PROXY} ` : '';
+          
+          let claudeCommand = `${proxyPrefix}claude`;
           
           if (hasSession && sessionId) {
             // Try to resume session, but with fallback to new session if it fails
-            claudeCommand = `claude --resume ${sessionId} || claude`;
+            claudeCommand = `${proxyPrefix}claude --resume ${sessionId} || ${proxyPrefix}claude`;
           }
           
           // Create shell command that cds to the project directory first

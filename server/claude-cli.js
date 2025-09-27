@@ -227,10 +227,18 @@ async function spawnClaude(command, options = {}, ws) {
     console.log('🔍 Full command args:', JSON.stringify(args, null, 2));
     console.log('🔍 Final Claude command will be: claude ' + args.join(' '));
     
+    // Setup environment with proxy if configured
+    const claudeEnv = { ...process.env };
+    if (process.env.CLAUDE_PROXY) {
+      claudeEnv.HTTP_PROXY = process.env.CLAUDE_PROXY;
+      claudeEnv.HTTPS_PROXY = process.env.CLAUDE_PROXY;
+      console.log('🌐 Using proxy for Claude CLI:', process.env.CLAUDE_PROXY);
+    }
+
     const claudeProcess = spawn('claude', args, {
       cwd: workingDir,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env } // Inherit all environment variables
+      env: claudeEnv
     });
     
     // Attach temp file info to process for cleanup later

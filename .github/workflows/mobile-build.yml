@@ -1,0 +1,288 @@
+name: Build Mobile Apps
+
+on:
+  push:
+    branches: [ private_build ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ private_build ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  JAVA_VERSION: '17'
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ env.JAVA_VERSION }}
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build web application
+      run: npm run build
+      
+    - name: Sync Capacitor
+      run: npx cap sync android
+      
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/gradlew
+      
+    - name: Build Android APK
+      run: |
+        cd android
+        ./gradlew assembleDebug
+        
+    - name: Build Android AAB (Release)
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        cd android
+        ./gradlew bundleRelease
+        
+    - name: Sign APK
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        echo "APK signing would happen here with proper keystore"
+        # Add keystore signing logic when you have certificates
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        
+    - name: Upload AAB artifact
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-aab
+        path: android/app/build/outputs/bundle/release/app-release.aab
+
+  # iOS build job (requires macOS runner)
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 'latest-stable'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Add iOS platform
+      run: npx cap add ios
+      
+    - name: Build web application
+      run: npm run build
+      
+    - name: Sync Capacitor
+      run: npx cap sync ios
+      
+    - name: Build iOS app
+      run: |
+        cd ios/App
+        xcodebuild -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Debug \
+          -destination 'generic/platform=iOS Simulator' \
+          -archivePath App.xcarchive \
+          archive
+          
+    - name: Export iOS app
+      run: |
+        cd ios/App
+        xcodebuild -exportArchive \
+          -archivePath App.xcarchive \
+          -exportPath . \
+          -exportOptionsPlist ../../ios-export-options.plist
+          
+    - name: Upload iOS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-app
+        path: ios/App/App.ipa
+
+  # Create release with built apps
+  create-release:
+    name: Create Release
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download Android APK
+      uses: actions/download-artifact@v4
+      with:
+        name: android-apk
+        path: ./releases/
+        
+    - name: Download Android AAB
+      uses: actions/download-artifact@v4
+      with:
+        name: android-aab
+        path: ./releases/
+        
+    - name: Download iOS App
+      if: needs.build-ios.result == 'success'
+      uses: actions/download-artifact@v4
+      with:
+        name: ios-app
+        path: ./releases/
+        
+    - name: Get tag name
+      id: tag
+      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      uses: ncipollo/create-release@v1
+      with:
+        tag: ${{ steps.tag.outputs.TAG_NAME }}
+        name: Claude Code UI ${{ steps.tag.outputs.TAG_NAME }}
+        body: |
+          ## Claude Code UI Mobile Release ${{ steps.tag.outputs.TAG_NAME }}
+          
+          ### 📱 Mobile Applications
+          - **Android APK**: Debug build for testing
+          - **Android AAB**: Production build for Google Play Store
+          - **iOS IPA**: Production build for App Store (if available)
+          
+          ### 🚀 Features
+          - Full Claude Code CLI integration
+          - Native mobile optimizations
+          - Touch-friendly interface
+          - Haptic feedback support
+          - Network status monitoring
+          - Platform-specific UI adaptations
+          
+          ### 📋 Installation
+          
+          **Android:**
+          1. Download the APK file
+          2. Enable "Install from unknown sources" in Android settings
+          3. Install the APK file
+          
+          **iOS:**
+          1. Requires signing with your Apple Developer account
+          2. Use Xcode or TestFlight for distribution
+          
+          ### 🔧 Technical Details
+          - Built with Capacitor ${{ env.CAPACITOR_VERSION }}
+          - React 18 + Vite + TailwindCSS
+          - Node.js backend with WebSocket support
+          - SQLite database for authentication
+          
+          ---
+          
+          **Full Changelog**: https://github.com/dbds-team/my_ccui/compare/previous-tag...${{ steps.tag.outputs.TAG_NAME }}
+        artifacts: "releases/*"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+  # Deploy to remote repository
+  deploy-to-remote:
+    name: Deploy to Remote Repository
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/private_build' || startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Git
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        
+    - name: Add remote repository
+      run: |
+        git remote add target https://github.com/dbds-team/my_ccui.git
+        
+    - name: Push to remote repository
+      env:
+        GITHUB_TOKEN: ${{ secrets.REMOTE_REPO_TOKEN }}
+      run: |
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/dbds-team/my_ccui.git private_build:private_build --force
+        
+        # If this is a tag, also push the tag
+        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/dbds-team/my_ccui.git ${GITHUB_REF#refs/tags/}
+        fi
+
+  # Run automated tests and quality checks
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Lint code
+      run: |
+        # Add linting commands if available
+        echo "Linting would run here"
+        
+    - name: Type check
+      run: |
+        # Add type checking if TypeScript is used
+        echo "Type checking would run here"
+        
+    - name: Security audit
+      run: npm audit --audit-level=moderate
+      
+    - name: Check build size
+      run: |
+        npm run build
+        du -sh dist/
+        echo "Build completed successfully"
+        
+    - name: Validate Capacitor config
+      run: |
+        npx cap doctor
+        echo "Capacitor configuration is valid"
