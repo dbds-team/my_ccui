@@ -1837,7 +1837,8 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      const newHeight = Math.min(textareaRef.current.scrollHeight, window.innerHeight * 0.6);
+      textareaRef.current.style.height = newHeight + 'px';
 
       // Check if initially expanded
       const lineHeight = parseInt(window.getComputedStyle(textareaRef.current).lineHeight);
@@ -1863,12 +1864,18 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
         setTimeout(() => {
           if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+            const newHeight = Math.min(textareaRef.current.scrollHeight, window.innerHeight * 0.6);
+            textareaRef.current.style.height = newHeight + 'px';
             
             // Check if expanded after transcript
             const lineHeight = parseInt(window.getComputedStyle(textareaRef.current).lineHeight);
             const isExpanded = textareaRef.current.scrollHeight > lineHeight * 2;
             setIsTextareaExpanded(isExpanded);
+            
+            // Ensure textarea is scrolled to show cursor when at max height
+            if (textareaRef.current.scrollHeight > newHeight) {
+              textareaRef.current.scrollTop = textareaRef.current.scrollHeight - textareaRef.current.clientHeight;
+            }
           }
         }, 0);
         
@@ -2326,9 +2333,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
 
 
       {/* Input Area - Fixed Bottom */}
-      <div className={`p-2 sm:p-4 md:p-6 flex-shrink-0 ${
-        isInputFocused ? 'pb-2 sm:pb-4 md:pb-6' : 'pb-16 sm:pb-4 md:pb-6'
-      }`}>
+      <div className="p-2 sm:p-4 md:p-6 pb-4 sm:pb-4 md:pb-6 flex-shrink-0" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         {/* Claude Working Status - positioned above the input form */}
         <ClaudeStatus 
           status={claudeStatus}
@@ -2464,18 +2469,24 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
               onInput={(e) => {
                 // Immediate resize on input for better UX
                 e.target.style.height = 'auto';
-                e.target.style.height = e.target.scrollHeight + 'px';
+                const newHeight = Math.min(e.target.scrollHeight, window.innerHeight * 0.6);
+                e.target.style.height = newHeight + 'px';
                 setCursorPosition(e.target.selectionStart);
                 
                 // Check if textarea is expanded (more than 2 lines worth of height)
                 const lineHeight = parseInt(window.getComputedStyle(e.target).lineHeight);
                 const isExpanded = e.target.scrollHeight > lineHeight * 2;
                 setIsTextareaExpanded(isExpanded);
+                
+                // Ensure textarea is scrolled to show cursor when at max height
+                if (e.target.scrollHeight > newHeight) {
+                  e.target.scrollTop = e.target.scrollHeight - e.target.clientHeight;
+                }
               }}
               placeholder="Ask Claude to help with your code... (@ to reference files)"
               disabled={isLoading}
               rows={1}
-              className="chat-input-placeholder w-full pl-12 pr-28 sm:pr-40 py-3 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[40px] sm:min-h-[56px] max-h-[40vh] sm:max-h-[300px] overflow-y-auto text-sm sm:text-base transition-all duration-200"
+              className="chat-input-placeholder w-full pl-12 pr-28 sm:pr-40 py-3 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[40px] sm:min-h-[56px] max-h-[60vh] sm:max-h-[50vh] overflow-y-auto text-sm sm:text-base transition-all duration-200"
               style={{ height: 'auto' }}
             />
             {/* Clear button - shown when there's text */}
@@ -2551,7 +2562,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                 e.preventDefault();
                 handleSubmit(e);
               }}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800 shadow-lg hover:shadow-xl active:scale-95"
             >
               <svg 
                 className="w-4 h-4 sm:w-5 sm:h-5 text-white transform rotate-90" 

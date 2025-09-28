@@ -170,9 +170,8 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
     if (isConnected) {
       await saveConfig(serverUrl.trim());
       onSave(serverUrl.trim());
-      setTimeout(() => {
-        handleClose();
-      }, 1500);
+      // 立即关闭，避免透明度问题
+      handleClose();
     }
   };
 
