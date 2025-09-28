@@ -1098,7 +1098,7 @@ const ImageAttachment = ({ file, onRemove, uploadProgress, error }) => {
 // - onReplaceTemporarySession: Called to replace temporary session ID with real WebSocket session ID
 //
 // This ensures uninterrupted chat experience by pausing sidebar refreshes during conversations.
-function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, autoScrollToBottom, sendByCtrlEnter }) {
+function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, messages, isConnected, onFileOpen, onInputFocusChange, onSessionActive, onSessionInactive, onReplaceTemporarySession, onNavigateToSession, onShowSettings, autoExpandTools, showRawParameters, autoScrollToBottom, sendByCtrlEnter }) {
   const [input, setInput] = useState(() => {
     if (typeof window !== 'undefined' && selectedProject) {
       return safeLocalStorage.getItem(`draft_input_${selectedProject.name}`) || '';
@@ -1964,6 +1964,16 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim() || isLoading || !selectedProject) return;
+    
+    // Check WebSocket connection
+    if (!isConnected) {
+      setChatMessages(prev => [...prev, {
+        type: 'error',
+        content: '连接服务器失败，请检查网络连接或服务器状态。正在尝试重新连接...',
+        timestamp: new Date()
+      }]);
+      return;
+    }
 
     // Upload images first if any
     let uploadedImages = [];
@@ -2250,6 +2260,15 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
           }
         `}
       </style>
+      
+      {/* Connection status indicator */}
+      {!isConnected && (
+        <div className="bg-red-500 text-white text-center py-2 px-4 text-sm flex items-center justify-center gap-2 z-50">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span>服务器连接断开，正在重新连接...</span>
+        </div>
+      )}
+      
       <div className="h-full flex flex-col">
         {/* Messages Area - Scrollable Middle Section */}
       <div 
@@ -2553,7 +2572,7 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             {/* Send button */}
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || !isConnected}
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSubmit(e);
@@ -2562,7 +2581,12 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
                 e.preventDefault();
                 handleSubmit(e);
               }}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800 shadow-lg hover:shadow-xl active:scale-95"
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800 shadow-lg hover:shadow-xl active:scale-95 ${
+                !isConnected 
+                  ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-400' 
+                  : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400'
+              } disabled:cursor-not-allowed`}
+              title={!isConnected ? '服务器连接断开' : '发送消息'}
             >
               <svg 
                 className="w-4 h-4 sm:w-5 sm:h-5 text-white transform rotate-90" 

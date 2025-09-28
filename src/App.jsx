@@ -78,7 +78,7 @@ function AppContent() {
   // until the conversation completes or is aborted.
   const [activeSessions, setActiveSessions] = useState(new Set()); // Track sessions with active conversations
   
-  const { ws, sendMessage, messages } = useWebSocket();
+  const { ws, sendMessage, messages, isConnected } = useWebSocket();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -595,6 +595,7 @@ function AppContent() {
           ws={ws}
           sendMessage={sendMessage}
           messages={messages}
+          isConnected={isConnected}
           isMobile={isMobile}
           onMenuClick={() => setSidebarOpen(true)}
           isLoading={isLoadingProjects}

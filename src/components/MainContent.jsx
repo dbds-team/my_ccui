@@ -27,6 +27,7 @@ function MainContent({
   ws, 
   sendMessage, 
   messages,
+  isConnected,
   isMobile,
   onMenuClick,
   isLoading,
@@ -278,6 +279,7 @@ function MainContent({
               ws={ws}
               sendMessage={sendMessage}
               messages={messages}
+              isConnected={isConnected}
               onFileOpen={handleFileOpen}
               onInputFocusChange={onInputFocusChange}
               onSessionActive={onSessionActive}

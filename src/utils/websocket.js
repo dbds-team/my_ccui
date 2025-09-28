@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getApiBaseUrl } from './api';
 
 export function useWebSocket() {
   const [ws, setWs] = useState(null);
@@ -28,38 +29,20 @@ export function useWebSocket() {
         return;
       }
       
-      // Fetch server configuration to get the correct WebSocket URL
-      let wsBaseUrl;
-      try {
-        const configResponse = await fetch('/api/config', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const config = await configResponse.json();
-        wsBaseUrl = config.wsUrl;
-        
-        // If the config returns localhost but we're not on localhost, use current host but with API server port
-        if (wsBaseUrl.includes('localhost') && !window.location.hostname.includes('localhost')) {
-          console.warn('Config returned localhost, using current host with API server port instead');
-          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          // For development, API server is typically on port 3002 when Vite is on 3001
-          const apiPort = window.location.port === '3001' ? '3002' : window.location.port;
-          wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
-        }
-      } catch (error) {
-        console.warn('Could not fetch server config, falling back to current host with API server port');
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // For development, API server is typically on port 3002 when Vite is on 3001
-        const apiPort = window.location.port === '3001' ? '3002' : window.location.port;
-        wsBaseUrl = `${protocol}//${window.location.hostname}:${apiPort}`;
-      }
+      // Use the same API base URL logic as other requests
+      const apiBaseUrl = await getApiBaseUrl();
+      console.log('WebSocket using API base URL:', apiBaseUrl);
+      
+      // Convert HTTP(S) URL to WebSocket URL
+      const wsBaseUrl = apiBaseUrl.replace(/^https?:/, apiBaseUrl.startsWith('https:') ? 'wss:' : 'ws:');
       
       // Include token in WebSocket URL as query parameter
       const wsUrl = `${wsBaseUrl}/ws?token=${encodeURIComponent(token)}`;
+      console.log('WebSocket connecting to:', wsUrl);
       const websocket = new WebSocket(wsUrl);
 
       websocket.onopen = () => {
+        console.log('WebSocket connected successfully');
         setIsConnected(true);
         setWs(websocket);
       };
@@ -73,12 +56,14 @@ export function useWebSocket() {
         }
       };
 
-      websocket.onclose = () => {
+      websocket.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
         setWs(null);
         
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Attempting WebSocket reconnection...');
           connect();
         }, 3000);
       };
@@ -94,9 +79,11 @@ export function useWebSocket() {
 
   const sendMessage = (message) => {
     if (ws && isConnected) {
+      console.log('Sending WebSocket message:', message.type);
       ws.send(JSON.stringify(message));
     } else {
-      console.warn('WebSocket not connected');
+      console.error('WebSocket not connected. Connection state:', { ws: !!ws, isConnected });
+      // TODO: 可以在这里添加UI提示用户连接失败
     }
   };
 
