@@ -140,7 +140,7 @@ const LoginForm = () => {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 text-base border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                 placeholder="请输入用户名"
                 required
                 disabled={isLoading}
@@ -158,7 +158,7 @@ const LoginForm = () => {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 pr-12 text-base border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                   placeholder="请输入密码"
                   required
                   disabled={isLoading}
@@ -167,25 +167,25 @@ const LoginForm = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
                   disabled={isLoading}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
             {/* 记住密码选项 */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <input
                 type="checkbox"
                 id="remember"
                 checked={rememberPassword}
                 onChange={(e) => setRememberPassword(e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-background border-border rounded focus:ring-blue-500 focus:ring-2"
+                className="w-5 h-5 text-blue-600 bg-background border-border rounded focus:ring-blue-500 focus:ring-2 touch-manipulation"
                 disabled={isLoading}
               />
-              <label htmlFor="remember" className="text-sm text-foreground cursor-pointer">
+              <label htmlFor="remember" className="text-base text-foreground cursor-pointer touch-manipulation">
                 记住密码
               </label>
             </div>
@@ -199,7 +199,7 @@ const LoginForm = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3.5 px-4 text-base rounded-md transition-colors duration-200 touch-manipulation min-h-[48px]"
             >
               {isLoading ? '登录中...' : '登录'}
             </button>

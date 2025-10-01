@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings, 
-  Server, 
-  Shield, 
-  Trash2, 
-  Eye, 
-  EyeOff, 
-  LogOut, 
+import {
+  Settings,
+  Server,
+  Shield,
+  Trash2,
+  Eye,
+  EyeOff,
+  LogOut,
   Smartphone,
   Wifi,
   WifiOff,
@@ -18,9 +18,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { credentialsStorage } from '../utils/credentials';
 import PlatformUtils from '../utils/platform';
 import ServerConfig from './ServerConfig';
+import { useToast } from './Toast';
 
 const SettingsPage = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('server');
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [networkStatus, setNetworkStatus] = useState({ connected: true, connectionType: 'unknown' });
@@ -94,11 +96,23 @@ const SettingsPage = ({ isOpen, onClose }) => {
     if (confirm('确定要清除保存的登录凭据吗？')) {
       await credentialsStorage.clearCredentials();
       await loadSettings();
+
+      // 触发haptic反馈
+      if (PlatformUtils.isNative()) {
+        await PlatformUtils.hapticFeedback('light');
+      }
+
+      showToast('登录凭据已清除', 'info');
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('确定要退出登录吗？')) {
+      // 触发haptic反馈
+      if (PlatformUtils.isNative()) {
+        await PlatformUtils.hapticFeedback('medium');
+      }
+
       logout();
       onClose();
     }
@@ -107,7 +121,15 @@ const SettingsPage = ({ isOpen, onClose }) => {
   const handleServerConfigSave = async (serverUrl) => {
     await credentialsStorage.saveServerConfig(serverUrl);
     await loadSettings();
-    window.location.reload(); // 重新加载应用以应用新的服务器配置
+
+    // 触发haptic反馈
+    if (PlatformUtils.isNative()) {
+      await PlatformUtils.hapticFeedback('success');
+    }
+
+    // 显示成功提示
+    showToast('服务器配置已保存', 'success');
+    // 无需重新加载页面，下次API请求会使用新的服务器配置
   };
 
   const handleResetToDefault = async () => {
@@ -119,7 +141,13 @@ const SettingsPage = ({ isOpen, onClose }) => {
         localStorage.removeItem('claude-server-url');
       }
       await loadSettings();
-      alert('设置已重置到默认值');
+
+      // 触发haptic反馈
+      if (PlatformUtils.isNative()) {
+        await PlatformUtils.hapticFeedback('warning');
+      }
+
+      showToast('设置已重置到默认值', 'success');
     }
   };
 
@@ -142,10 +170,10 @@ const SettingsPage = ({ isOpen, onClose }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-muted rounded-md transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-md transition-colors touch-manipulation"
           >
             <span className="sr-only">关闭</span>
-            ✕
+            <span className="text-xl">✕</span>
           </button>
         </div>
 
@@ -159,7 +187,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center space-x-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    className={`w-full flex items-center space-x-2 px-3 py-3 min-h-[44px] rounded-md text-sm transition-colors touch-manipulation ${
                       activeTab === tab.id
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -227,7 +255,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
                       </p>
                       <button
                         onClick={() => setShowServerConfig(true)}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
+                        className="flex items-center justify-center space-x-2 px-4 py-2.5 min-h-[44px] bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors touch-manipulation"
                       >
                         <Server className="w-4 h-4" />
                         <span>配置服务器</span>
@@ -284,7 +312,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
                           </label>
                           <button
                             onClick={() => setShowCredentials(!showCredentials)}
-                            className="p-1 hover:bg-muted rounded transition-colors"
+                            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded transition-colors touch-manipulation"
                           >
                             {showCredentials ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
@@ -296,7 +324,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
                         )}
                         <button
                           onClick={handleClearCredentials}
-                          className="flex items-center space-x-2 px-3 py-1.5 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"
+                          className="flex items-center justify-center space-x-2 px-4 py-2.5 min-h-[44px] bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors touch-manipulation"
                         >
                           <Trash2 className="w-4 h-4" />
                           <span>清除凭据</span>
@@ -362,7 +390,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
                     <div className="space-y-2">
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 min-h-[48px] bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors touch-manipulation"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>退出登录</span>
@@ -370,7 +398,7 @@ const SettingsPage = ({ isOpen, onClose }) => {
 
                       <button
                         onClick={handleResetToDefault}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 border border-border text-muted-foreground rounded-md text-sm hover:bg-muted transition-colors"
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 min-h-[48px] border border-border text-muted-foreground rounded-md text-sm hover:bg-muted transition-colors touch-manipulation"
                       >
                         <RotateCcw className="w-4 h-4" />
                         <span>重置所有设置</span>

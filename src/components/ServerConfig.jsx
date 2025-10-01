@@ -262,9 +262,9 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
         <div className="flex items-center justify-between p-4 border-b border-border bg-card">
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-muted rounded-md transition-colors -ml-2"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-muted rounded-md transition-colors touch-manipulation -ml-2"
           >
-            <ChevronLeft className="w-5 h-5 text-foreground" />
+            <ChevronLeft className="w-6 h-6 text-foreground" />
           </button>
           <h2 className="text-lg font-semibold text-foreground">服务器配置</h2>
           <div className="w-9" /> {/* 占位平衡布局 */}
@@ -354,7 +354,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
                     key={index}
                     onClick={() => handlePresetSelect(server.url)}
                     disabled={isConnecting || !networkStatus.connected}
-                    className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                    className={`w-full text-left p-4 min-h-[72px] rounded-lg border transition-colors touch-manipulation ${
                       serverUrl === server.url
                         ? 'bg-primary/10 border-primary text-primary'
                         : 'bg-card border-border hover:bg-muted/50'
@@ -386,7 +386,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
           <div className="flex space-x-3">
             <button
               onClick={handleClose}
-              className="flex-1 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors text-center font-medium"
+              className="flex-1 px-4 py-3.5 min-h-[52px] text-muted-foreground hover:text-foreground transition-colors text-center font-medium touch-manipulation"
               disabled={isConnecting}
             >
               取消
@@ -394,7 +394,7 @@ const ServerConfig = ({ isOpen, onClose, onSave }) => {
             <button
               onClick={handleSave}
               disabled={isConnecting || !serverUrl.trim() || !networkStatus.connected}
-              className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-3.5 min-h-[52px] bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation"
             >
               {isConnecting ? '连接中...' : '保存'}
             </button>
