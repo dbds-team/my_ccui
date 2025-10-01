@@ -34,6 +34,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { api } from './utils/api';
 import MobileApp from './components/MobileApp';
+import { ToastProvider } from './components/Toast';
 import './styles/mobile.css';
 
 
@@ -678,16 +679,18 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <ProtectedRoute>
-          <Router>
-            <Routes>
-              <Route path="/" element={<AppContent />} />
-              <Route path="/session/:sessionId" element={<AppContent />} />
-            </Routes>
-          </Router>
-        </ProtectedRoute>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <ProtectedRoute>
+            <Router>
+              <Routes>
+                <Route path="/" element={<AppContent />} />
+                <Route path="/session/:sessionId" element={<AppContent />} />
+              </Routes>
+            </Router>
+          </ProtectedRoute>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

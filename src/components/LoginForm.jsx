@@ -4,6 +4,7 @@ import { MessageSquare, Settings, Eye, EyeOff } from 'lucide-react';
 import ServerConfig from './ServerConfig';
 import { credentialsStorage } from '../utils/credentials';
 import PlatformUtils from '../utils/platform';
+import { useToast } from './Toast';
 
 const LoginForm = () => {
   const [username, setUsername] = useState('');
@@ -14,8 +15,9 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [currentServer, setCurrentServer] = useState('');
-  
+
   const { login } = useAuth();
+  const { showToast } = useToast();
 
   // 加载保存的凭据和服务器配置
   useEffect(() => {
@@ -70,8 +72,16 @@ const LoginForm = () => {
   const handleServerConfigSave = async (serverUrl) => {
     await credentialsStorage.saveServerConfig(serverUrl);
     setCurrentServer(serverUrl);
-    // 这里可以添加重新初始化API配置的逻辑
-    window.location.reload(); // 简单的解决方案：重新加载页面
+
+    // 触发haptic反馈
+    if (PlatformUtils.isNative()) {
+      await PlatformUtils.hapticFeedback('success');
+    }
+
+    // 显示成功提示
+    showToast('服务器配置已保存', 'success');
+    setError('');
+    // 无需重新加载页面，下次API请求会使用新的服务器配置
   };
 
   return (
