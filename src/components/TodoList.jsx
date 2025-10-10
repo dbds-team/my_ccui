@@ -61,12 +61,14 @@ const TodoList = ({ todos, isResult = false }) => {
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className={`text-sm font-medium ${todo.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-2">
+              <p
+                className={`text-sm font-medium flex-1 min-w-0 whitespace-pre-line break-words ${todo.status === 'completed' ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}
+              >
                 {todo.content}
               </p>
-              
-              <div className="flex gap-1 flex-shrink-0">
+
+              <div className="flex gap-1 flex-wrap sm:flex-nowrap flex-shrink-0">
                 <Badge
                   variant="outline"
                   className={`text-xs px-2 py-0.5 ${getPriorityColor(todo.priority)}`}

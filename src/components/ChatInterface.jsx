@@ -2474,134 +2474,157 @@ function ChatInterface({ selectedProject, selectedSession, ws, sendMessage, mess
             </div>
           )}
           
-          <div {...getRootProps()} className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200 ${isTextareaExpanded ? 'chat-input-expanded' : ''}`}>
+          <div
+            {...getRootProps()}
+            className={`group relative overflow-hidden bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600 focus-within:ring-2 focus-within:ring-blue-500 dark:focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200 ${isTextareaExpanded ? 'chat-input-expanded' : ''}`}
+          >
             <input {...getInputProps()} />
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInputChange}
-              onClick={handleTextareaClick}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
-              onInput={(e) => {
-                // Immediate resize on input for better UX
-                e.target.style.height = 'auto';
-                const newHeight = Math.min(e.target.scrollHeight, window.innerHeight * 0.6);
-                e.target.style.height = newHeight + 'px';
-                setCursorPosition(e.target.selectionStart);
-                
-                // Check if textarea is expanded (more than 2 lines worth of height)
-                const lineHeight = parseInt(window.getComputedStyle(e.target).lineHeight);
-                const isExpanded = e.target.scrollHeight > lineHeight * 2;
-                setIsTextareaExpanded(isExpanded);
-                
-                // Ensure textarea is scrolled to show cursor when at max height
-                if (e.target.scrollHeight > newHeight) {
-                  e.target.scrollTop = e.target.scrollHeight - e.target.clientHeight;
-                }
-              }}
-              placeholder="Ask Claude to help with your code... (@ to reference files)"
-              disabled={isLoading}
-              rows={1}
-              className="chat-input-placeholder w-full pl-12 pr-28 sm:pr-40 py-3 sm:py-4 bg-transparent rounded-2xl focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[40px] sm:min-h-[56px] max-h-[60vh] sm:max-h-[50vh] overflow-y-auto text-sm sm:text-base transition-all duration-200"
-              style={{ height: 'auto' }}
-            />
-            {/* Clear button - shown when there's text */}
-            {input.trim() && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setInput('');
-                  if (textareaRef.current) {
-                    textareaRef.current.style.height = 'auto';
-                    textareaRef.current.focus();
-                  }
-                  setIsTextareaExpanded(false);
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setInput('');
-                  if (textareaRef.current) {
-                    textareaRef.current.style.height = 'auto';
-                    textareaRef.current.focus();
-                  }
-                  setIsTextareaExpanded(false);
-                }}
-                className="absolute -left-0.5 -top-3 sm:right-28 sm:left-auto sm:top-1/2 sm:-translate-y-1/2 w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center transition-all duration-200 group z-10 shadow-sm"
-                title="Clear input"
-              >
-                <svg 
-                  className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+            <div className="px-3 py-3 sm:px-4 sm:py-4">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                {/* Image upload button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    open();
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    open();
+                  }}
+                  className="flex-shrink-0 inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gray-100/90 hover:bg-gray-200 dark:bg-gray-700/70 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200 transition-colors shadow-sm"
+                  title="Attach images"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M6 18L18 6M6 6l12 12" 
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </button>
+
+                <div className="relative flex-1 min-w-0">
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    onClick={handleTextareaClick}
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
+                    onInput={(e) => {
+                      // Immediate resize on input for better UX
+                      e.target.style.height = 'auto';
+                      const newHeight = Math.min(e.target.scrollHeight, window.innerHeight * 0.6);
+                      e.target.style.height = newHeight + 'px';
+                      setCursorPosition(e.target.selectionStart);
+                      
+                      // Check if textarea is expanded (more than 2 lines worth of height)
+                      const lineHeight = parseInt(window.getComputedStyle(e.target).lineHeight);
+                      const isExpanded = e.target.scrollHeight > lineHeight * 2;
+                      setIsTextareaExpanded(isExpanded);
+                      
+                      // Ensure textarea is scrolled to show cursor when at max height
+                      if (e.target.scrollHeight > newHeight) {
+                        e.target.scrollTop = e.target.scrollHeight - e.target.clientHeight;
+                      }
+                    }}
+                    placeholder="Ask Claude to help with your code... (@ to reference files)"
+                    disabled={isLoading}
+                    rows={1}
+                    className="chat-input-placeholder w-full px-4 py-3 sm:py-3.5 bg-gray-50 dark:bg-gray-900/60 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 resize-none min-h-[44px] sm:min-h-[56px] max-h-[60vh] sm:max-h-[50vh] overflow-y-auto text-sm sm:text-base transition-all duration-200"
+                    style={{ height: 'auto' }}
                   />
-                </svg>
-              </button>
-            )}
-            {/* Image upload button */}
-            <button
-              type="button"
-              onClick={open}
-              className="absolute left-2 bottom-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Attach images"
-            >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </button>
-            
-            {/* Mic button - HIDDEN */}
-            <div className="absolute right-16 sm:right-16 top-1/2 transform -translate-y-1/2" style={{ display: 'none' }}>
-              <MicButton 
-                onTranscript={handleTranscript}
-                className="w-10 h-10 sm:w-10 sm:h-10"
-              />
+
+                  {/* Clear button - shown when there's text */}
+                  {input.trim() && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setInput('');
+                        if (textareaRef.current) {
+                          textareaRef.current.style.height = 'auto';
+                          textareaRef.current.focus();
+                        }
+                        setIsTextareaExpanded(false);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setInput('');
+                        if (textareaRef.current) {
+                          textareaRef.current.style.height = 'auto';
+                          textareaRef.current.focus();
+                        }
+                        setIsTextareaExpanded(false);
+                      }}
+                      className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 bg-gray-200/90 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm"
+                      title="Clear input"
+                    >
+                      <svg 
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M6 18L18 6M6 6l12 12" 
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Mic button - HIDDEN */}
+                  <div className="hidden">
+                    <MicButton 
+                      onTranscript={handleTranscript}
+                      className="w-10 h-10 sm:w-10 sm:h-10"
+                    />
+                  </div>
+
+                  {/* Send button */}
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isLoading || !isConnected}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }}
+                    className={`flex-shrink-0 w-12 h-12 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800 shadow-lg hover:shadow-xl active:scale-95 ${
+                      !isConnected 
+                        ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-400' 
+                        : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400'
+                    } disabled:cursor-not-allowed`}
+                    title={!isConnected ? '服务器连接断开' : '发送消息'}
+                  >
+                    <svg 
+                      className="w-5 h-5 text-white transform rotate-90" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
-            {/* Send button */}
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading || !isConnected}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:ring-offset-gray-800 shadow-lg hover:shadow-xl active:scale-95 ${
-                !isConnected 
-                  ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-400' 
-                  : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400'
-              } disabled:cursor-not-allowed`}
-              title={!isConnected ? '服务器连接断开' : '发送消息'}
-            >
-              <svg 
-                className="w-4 h-4 sm:w-5 sm:h-5 text-white transform rotate-90" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
-                />
-              </svg>
-            </button>
           </div>
           {/* Hint text */}
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2 hidden sm:block">
